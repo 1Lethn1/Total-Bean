@@ -1,0 +1,66 @@
+extends CharacterBody3D
+
+@onready var playerArmyAgent = $PlayerArmyAgent
+@onready var playerArmyTimer = $PlayerArmyTimer
+
+@onready var playerFactionManagerGroup = get_tree().get_nodes_in_group("PlayerFactionManager")
+@onready var playerFaction = playerFactionManagerGroup[0]
+
+@onready var mouseInteractionGroup = get_tree().get_nodes_in_group("MouseInteraction")
+@onready var mouseInteraction = mouseInteractionGroup[0]
+
+
+var speed = 10
+
+var clickPosition = Vector3()
+var distanceToTarget = Vector3()
+var distancedMoved = 0
+var canMove = true
+var canClickNewPath = true
+var isWithinClickLimit = false
+var next
+
+func _ready():
+	playerArmyAgent.set_target_position(self.global_transform.origin)
+
+func _physics_process(_delta):
+		
+	if canMove == true: 
+		speed = 10
+		next = playerArmyAgent.get_next_path_position()
+		var velocity = (next - global_transform.origin).normalized() * speed
+		playerArmyAgent.set_velocity(velocity)
+		
+		var currentLocation = global_transform.origin
+		distanceToTarget = currentLocation.distance_to(mouseInteraction.mousePositionDistance)
+		distancedMoved = mouseInteraction.previousPlayerArmyPosition.distance_to(global_transform.origin)
+		
+		if distanceToTarget < 50:
+			isWithinClickLimit = true
+		elif distanceToTarget > 50:
+			isWithinClickLimit = false
+			canClickNewPath = false
+			canMove = false
+	elif canMove == false:
+		playerArmyAgent.speed = 0
+	
+	if playerFaction.isItCurrentFactionTurn == true:
+		pass
+
+func _on_PlayerArmyAgent_velocity_computed(safe_velocity):
+	velocity = safe_velocity
+	move_and_slide()
+
+func _on_EndTurnButton_pressed():
+	print("Turn Ended")
+	playerArmyTimer.start()
+
+func _on_PlayerArmyAgent_path_changed():
+	pass
+
+func _on_PlayerArmyAgent_target_reached():
+	speed = 0
+
+func _on_PlayerArmyTimer_timeout():
+	canMove = true
+	canClickNewPath = true
