@@ -1,0 +1,144 @@
+extends Node3D
+
+@onready var playerCameraGroup = get_tree().get_nodes_in_group("PlayerCamera")
+@onready var playerCamera = playerCameraGroup[0]
+
+var buildingSlots
+
+var mouseInteractionEnabled = true
+
+var rayOrigin = Vector3()
+var rayEnd = Vector3()
+var rayLength = 5000
+
+var raycastCollisionResult
+var raycastCollider
+
+var raycastPositionResult
+
+var previousSelectionCircle
+var currentSelectionCircle
+
+var currentPlayerArmyPosition = Vector3()
+var clickPosition = Vector3()
+var mousePosition
+var isPlayerArmySelected = false
+var currentPlayerArmy
+var mousePositionDistance = Vector3()
+var previousPlayerArmyPosition = Vector3()
+
+func _physics_process(_delta):
+
+	var spaceState = get_world_3d().direct_space_state
+	var mousePosition = get_viewport().get_mouse_position()
+	
+	var raycastOrigin = playerCamera.project_ray_origin(mousePosition)
+	var raycastTarget = raycastOrigin + playerCamera.project_ray_normal(mousePosition) * rayLength
+	var physicsRaycastQuery = PhysicsRayQueryParameters3D.create(raycastOrigin, raycastTarget)
+	
+	raycastCollisionResult = spaceState.intersect_ray(physicsRaycastQuery)
+	
+	raycastPositionResult = spaceState.intersect_ray(physicsRaycastQuery)
+	
+	
+	if raycastCollisionResult.is_empty():
+		return
+	elif not raycastCollisionResult.is_empty():
+		raycastCollider = raycastCollisionResult["collider"]
+		
+	if raycastPositionResult.is_empty():
+		return
+	elif not raycastPositionResult.is_empty():
+		raycastPositionResult["position"]
+		
+		
+	
+	if Input.is_action_just_pressed("RightClick") && mouseInteractionEnabled && isPlayerArmySelected == true && currentPlayerArmy.canClickNewPath == true:
+		if raycastCollider.is_in_group("Floor"):
+			previousPlayerArmyPosition = global_transform.origin
+			clickPosition = raycastPositionResult.position
+			currentPlayerArmy.playerArmyAgent.set_target_position(clickPosition)
+			currentPlayerArmy.clickPosition = clickPosition
+			currentPlayerArmy.canClickNewPath = false
+		
+	if Input.is_action_just_pressed("LeftClick") and mouseInteractionEnabled == true:
+		if not previousSelectionCircle == null:
+			previousSelectionCircle.visible = false
+		if raycastCollider.is_in_group("PlayerArmy"):
+			currentPlayerArmy = raycastCollider
+			currentSelectionCircle = raycastCollider.get_child(0)
+			currentSelectionCircle.visible = true
+			previousSelectionCircle = currentSelectionCircle
+			isPlayerArmySelected = true
+			print ("Player Army Selected")
+			
+			if not buildingSlots == null:
+				buildingSlots.visible = false
+			
+		if  raycastCollider.is_in_group("PlayerTown"):
+			currentSelectionCircle = raycastCollider.get_child(0)
+			currentSelectionCircle.visible = true
+			previousSelectionCircle = currentSelectionCircle
+			currentPlayerArmy = null
+			buildingSlots = raycastCollider.get_child(1)
+			buildingSlots.visible = true
+			isPlayerArmySelected = false
+			print ("Player Town Selected")
+			
+		if raycastCollider.is_in_group("NeutralTown"):
+			currentSelectionCircle = raycastCollider.get_child(0)
+			previousSelectionCircle = currentSelectionCircle
+			isPlayerArmySelected = false
+			currentPlayerArmy = null
+			print ("Neutral Town Selected")
+			
+			if not buildingSlots == null:
+				buildingSlots.visible = false
+			
+		if raycastCollider.is_in_group("EnemyTown"):
+			currentSelectionCircle = raycastCollider.get_child(0)
+			currentSelectionCircle.visible = true
+			previousSelectionCircle = currentSelectionCircle
+			isPlayerArmySelected = false
+			currentPlayerArmy = null
+			print ("Enemy Town Selected")
+			
+			
+			if not buildingSlots == null:
+				buildingSlots.visible = false
+			
+		if raycastCollider.is_in_group("Floor"):
+			if not previousSelectionCircle == null:
+				previousSelectionCircle.visible = false
+			if not currentSelectionCircle == null:
+				currentSelectionCircle.visible = false
+				isPlayerArmySelected = false
+				currentPlayerArmy = null
+				print ("Floor Selected")
+			if not buildingSlots == null:
+				buildingSlots.visible = false
+			
+		if raycastCollider.is_in_group("OutOfBounds"):
+			isPlayerArmySelected = false
+			if not previousSelectionCircle == null:
+				previousSelectionCircle.visible = false
+			if not currentSelectionCircle == null:
+				currentSelectionCircle.visible = false
+			if not buildingSlots == null:
+				buildingSlots.visible = false
+
+
+func _on_Button_mouse_entered():
+	mouseInteractionEnabled = false
+
+
+func _on_Button_mouse_exited():
+	mouseInteractionEnabled = true
+
+
+func _on_EndTurnButton_mouse_entered():
+	mouseInteractionEnabled = false
+
+
+func _on_EndTurnButton_mouse_exited():
+	mouseInteractionEnabled = true
